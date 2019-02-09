@@ -1,0 +1,23 @@
+{
+    "remoteDnsConnectionMode": "udp",
+    "upstreamDnsIP": "8.8.8.8",
+    "upstreamDnsPort": 53,
+    "localDnsPort": 53,
+    "forgedRequestsTTL": 10,
+    "upstreamDnsTlsHost": "8.8.8.8",
+    "upstreamDnsTlsPort": 853,
+
+
+    "requestsToForge": [
+        {
+            "comment": "Serve requests to yandex.ru locally",
+            "hostName": "yandex.ru",
+            "ip": "127.0.0.1"
+        },
+        {
+            "comment": "Serve requests to google.com locally",
+            "hostName": "google.com",
+            "ip": "127.0.0.1"
+        }
+    ]
+}
