@@ -18,6 +18,11 @@
             "comment": "Serve requests to google.com locally",
             "hostName": "google.com",
             "ip": "127.0.0.1"
+        },
+        {
+            "comment": "CNAME requests for google.ru as google.com",
+            "hostName": "google.ru",
+            "cname": "yandex.ru"
         }
     ]
 }

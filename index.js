@@ -106,7 +106,7 @@ const TlsClient = require('./tls-client');
 
             if (functions.domainNameMatchesTemplate(question.domainName, targetDomainName)
                 && question.qclass === 1
-                && question.qtype === 1) {
+                && (question.qtype === 1 || question.qtype === 5)) {
                 forgingHostParams = requestToForge;
                 break;
             }
@@ -114,17 +114,52 @@ const TlsClient = require('./tls-client');
 
         if (!!forgingHostParams) {
             const forgeIp = forgingHostParams.ip;
+            const forgeCNAME = forgingHostParams.cname;
             const answers = [];
 
-            answers.push({
-                domainName: question.domainName,
-                type: question.qtype,
-                class: question.qclass,
-                ttl: forgedRequestsTTL,
-                rdlength: 4,
-                rdata_bin: functions.ip4StringToBuffer(forgeIp),
-                IPv4: forgeIp
-            });
+            if (forgeIp) {
+                answers.push({
+                    domainName: question.domainName,
+                    type: question.qtype,   // 1
+                    class: question.qclass,
+                    ttl: forgedRequestsTTL,
+                    rdlength: 4,
+                    rdata_bin: functions.ip4StringToBuffer(forgeIp),
+                    IPv4: forgeIp
+                });
+            }
+            else if (forgeCNAME) {
+                const rdata = functions.writeDomainNameToBuf(forgeCNAME);
+                const rdlength = rdata.length;
+
+                answers.push({
+                    domainName: question.domainName,
+                    type: 5,    // type CNAME
+                    class: question.qclass,
+                    ttl: forgedRequestsTTL,
+                    rdlength: rdlength,
+                    rdata_bin: rdata
+                    // IPv4: forgeIp
+                });
+
+                // ToDo here should be returned an up-level (either forged) answer for CNAME domain
+                // answers.push({
+                //     domainName: question.domainName,
+                //     type: question.qtype,   // 1
+                //     class: question.qclass,
+                //     ttl: forgedRequestsTTL,
+                //     rdlength: 4,
+                //     rdata_bin: functions.ip4StringToBuffer('127.0.0.3'),
+                //     IPv4: '127.0.0.3'
+                // });
+            } else {
+                // throw exception
+                throw new Execption(
+                    'For ' + question.domainName + ' should be specified '
+                    + '\'ip\' either \'cname\' field in config'
+                );
+            };
+
 
             const localDnsResponse = {
                 ID: dnsRequest.ID,
@@ -133,7 +168,8 @@ const TlsClient = require('./tls-client');
                 AA: dnsRequest.AA,
                 TC: false,      // dnsRequest.TC,
                 RD: dnsRequest.RD,
-                RA: true,       // ToDo should it be some more complex logic here, rather then simply setting to 'true'?
+                // RA: true,       // ToDo should it be some more complex logic here, rather then simply setting to 'true'?
+                RA: false,       // ToDo should it be some more complex logic here, rather then simply setting to 'true'?
                 Z: dnsRequest.Z,
                 RCODE: 0,       // dnsRequest.RCODE,    0 - no errors, look in RFC-1035 for other error conditions
                 QDCOUNT: dnsRequest.QDCOUNT,
