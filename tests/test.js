@@ -34,6 +34,29 @@ const mocks = require('./test_mocks');
     console.log();
 })();
 
+// write domain name to buffer in DNS format
+(function() {
+    const domainName = 'www.google.com';
+    const domainNameBuf = functions.writeDomainNameToBuf(domainName);
+
+    const estimatedBuf = Buffer.from([3, 119, 119, 119, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0]);
+
+    console.log('write domain name to buffer in DNS format test');
+    console.log('\t given buffer to estimated buffer:')
+    console.log(functions.binDataToString(domainNameBuf));
+    console.log(functions.binDataToString(estimatedBuf));
+
+    if (domainNameBuf.equals(estimatedBuf)) {
+        console.log('\tPASS: buffers match');
+    }
+    else {
+        throw new Exception('Error: buffers does not match');
+    };
+
+    console.log();
+})();
+
+
 // get request key on DNS message fields
 (function(){
     const dnsMessageFields = {
@@ -152,3 +175,4 @@ const mocks = require('./test_mocks');
     console.log("Got upstream DNS response", responseMessageFields);
 
 })();
+

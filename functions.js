@@ -13,6 +13,7 @@ const dgram = require('dgram');
 
 
 exports.readDomainName = readDomainName;
+exports.writeDomainNameToBuf = writeDomainNameToBuf;
 exports.parseDnsMessageBytes = parseDnsMessageBytes;
 exports.composeDnsMessageBin = composeDnsMessageBin;
 exports.getRemoteDnsResponseBin = getRemoteDnsResponseBin;
@@ -113,6 +114,28 @@ function readDomainName (buf, startOffset, objReturnValue = {}) {
     }
 
     return domain.substring(1);     // rid of first "."
+}
+
+/**
+ * Returns buffer containing given domain name in DNS representation,
+ * i.e. 'label_length label_itself', with trailing 0
+ * @param {string} domainName
+ */
+function writeDomainNameToBuf (domainName) {
+    const labels = domainName.split('.');
+
+    const buf = Buffer.alloc(domainName.length + 2);
+
+    let bufPos = 0;
+    for (let i = 0; i < labels.length; i++) {
+        buf.writeUInt8(labels[i].length, bufPos);
+        bufPos++;
+        buf.write(labels[i], bufPos, 'ascii');
+        bufPos = bufPos + labels[i].length;
+    }
+    buf.writeUInt8(0, bufPos);
+
+    return buf;
 }
 
 
