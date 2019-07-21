@@ -12,7 +12,12 @@ function Module(connectionOptions, funcOnData, funcOnError, funcOnClose, funcOnE
             socket.authorized ? 'authorized' : 'unauthorized');
         });
 
-        socket.on('data', funcOnData);
+
+        // socket.on('data', funcOnData);
+        if (funcOnData) {
+            socket.on('data', funcOnData);
+        }
+
 
         // connection.on('end', () => {});
 
@@ -58,6 +63,14 @@ function Module(connectionOptions, funcOnData, funcOnError, funcOnClose, funcOnE
         }
 
         socket.write(dataBuf);
+    }
+
+    this.getSocket = function () {
+        return socket;
+    }
+
+    this.addOnData = function (onDataFunction) {
+        socket.on('data', onDataFunction);
     }
 
     return this;

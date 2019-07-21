@@ -22,6 +22,7 @@ exports.ip4StringToBuffer = ip4StringToBuffer;
 exports.domainNameMatchesTemplate = domainNameMatchesTemplate;
 exports.getRequestIdentifier = getRequestIdentifier;
 exports.binDataToString = binDataToString;
+exports.getRemoteDnsTlsResponseBin = getRemoteDnsTlsResponseBin;
 
 const blankMessageFields = {
     ID: 0,
@@ -428,6 +429,140 @@ async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP, remotePort) {
 
     return promise;
 }
+
+
+
+const localRequestsAwaiting = new Map();
+
+async function getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
+    // const localReqParams = {
+    //     domainName: dnsMessageFields.questions[0].domainName,
+    //     address: linfo.address,
+    //     port: linfo.port
+    // };
+
+    const requestKey = getRequestIdentifier(dnsMessageFields);
+    // localRequestsAwaiting.set(requestKey, localReqParams);
+
+    const lenBuf = Buffer.alloc(2);
+    const dnsMessageBuf = composeDnsMessageBin(dnsMessageFields);
+    lenBuf.writeUInt16BE(dnsMessageBuf.length);
+    const prepReqBuf = Buffer.concat([lenBuf, dnsMessageBuf], 2 + dnsMessageBuf.length);
+
+    // // remoteTlsClient.write(lenBuf);
+    // // remoteTlsClient.write(localReq);
+    remoteTlsClient.write(prepReqBuf);   // as of RFC-7766 p.8, length bytes and request data should be send in single "write" call
+
+
+    // const onData = (data) => {
+    //     console.log("data gotten over TLS connection in async function:", data);
+
+    //     // Process the case if server responds with several DNS response messages in one TCP or TLS response,
+    //     // so that each DNS response message will arrive in a view: 2 bytes message length, then message bytes themselves.
+    //     // Though, not clear for me yet, if server may respond with several DNS response messages in single TCP or TLS message
+    //     // in practise.
+    //     // ToDo how to test it? Didn't meet such case yet.
+    //     let dataCurrentPos = 0;
+    //     try {
+    //         while (dataCurrentPos < data.length) {
+    //             const respLen = data.readUInt16BE(dataCurrentPos);
+    //             console.log('response length:', respLen);
+
+    //             respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
+    //             const respData = functions.parseDnsMessageBytes(respBuf);
+
+    //             console.log(respData);
+
+    //             const requestKey = functions.getRequestIdentifier(respData);
+    //             const localResponseParams = localRequestsAwaiting.get(requestKey);
+    //             localRequestsAwaiting.delete(requestKey);
+
+    //             server.send(respBuf, localResponseParams.port, localResponseParams.address, (err, bytesNum) => {});
+
+    //             dataCurrentPos += 2 + respLen;
+    //         }
+    //     }
+    //     catch (err) {
+    //         console.log();
+    //         console.group();
+    //         console.error(err);
+    //         console.log('DNS response binary data:')
+    //         console.log(functions.binDataToString(data));
+    //         console.groupEnd();
+    //         console.log();
+
+    //         // while in development, throw error after logging, for not to miss it
+    //         throw err;
+    //     }
+    // };
+
+    const socket = remoteTlsClient.getSocket();
+
+    const promise = new Promise((resolve, reject) => {
+        socket.on('data',
+            (data) => {
+                console.log("data gotten over TLS connection in async function:", data);
+
+                // Process the case if server responds with several DNS response messages in one TCP or TLS response,
+                // so that each DNS response message will arrive in a view: 2 bytes message length, then message bytes themselves.
+                // Though, not clear for me yet, if server may respond with several DNS response messages in single TCP or TLS message
+                // in practise.
+                // ToDo how to test it? Didn't meet such case yet.
+                let dataCurrentPos = 0;
+                try {
+                    while (dataCurrentPos < data.length) {
+                        const respLen = data.readUInt16BE(dataCurrentPos);
+                        console.log('response length:', respLen);
+
+                        respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
+                        const respData = parseDnsMessageBytes(respBuf);
+
+                        console.log(respData);
+
+                        const requestKey_resp = getRequestIdentifier(respData);
+                        // const localResponseParams = localRequestsAwaiting.get(requestKey);
+                        // localRequestsAwaiting.delete(requestKey);
+
+                        // server.send(respBuf, localResponseParams.port, localResponseParams.address, (err, bytesNum) => {});
+
+                        if (requestKey == requestKey_resp) {
+                            resolve(respData);
+                            return;
+                        } else {
+                            //
+                        }
+                        dataCurrentPos += 2 + respLen;
+                    }
+                }
+                catch (err) {
+                    console.log();
+                    console.group();
+                    console.error(err);
+                    console.log('DNS response binary data:')
+                    console.log(binDataToString(data));
+                    console.groupEnd();
+                    console.log();
+
+                    // while in development, throw error after logging, for not to miss it
+                    // throw err;
+                    reject(err);
+                }
+            }
+        )
+
+// stopped here
+
+        // client.on("message", function (msg, rinfo) {
+        //     client.close();
+        //     resolve(msg);
+        // });
+
+        // client.send(dnsMessageBin, remotePort, remoteIP, function(err, bytesCount) {});
+    }).then((msg) => { return msg });
+
+    return promise;
+}
+
 
 // ToDo should params order be: binBuf, IP, Port, or should it be binBuf, Port, IP like it is in client.send(.....)?
 // async function getRemoteDnsResponseFields(requestMessageFields, remoteIP = UPSTREAM_DNS_IP, remotePort = UPSTREAM_DNS_PORT) {
