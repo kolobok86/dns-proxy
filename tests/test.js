@@ -109,7 +109,7 @@ const TlsClient = require('../tls-client');
 
 // Query upstream DNS server with sample binary request
 
-// async DNS request
+// async DNS request - v1
 (async function() {
     const dnsMessageFields = {
         ID: 35733,  // arbitrary value, picked randomly
@@ -142,10 +142,97 @@ const TlsClient = require('../tls-client');
     const tlsClient = new TlsClient(tlsOptions);
 
 
-    const responseMessageFields = await functions.getRemoteDnsTlsResponseBin(dnsMessageFields, tlsClient);
+    const responseMessageFields = await functions._getRemoteDnsTlsResponseBin(dnsMessageFields, tlsClient);
 
     console.log();
     console.log('Async DNS request as function');
     console.log("Got upstream DNS response", responseMessageFields);
 
+})();
+
+
+// async DNS request - v2
+(async function() {
+    const dnsMessageFields = {
+        ID: 35733,  // arbitrary value, picked randomly
+        QR: false,
+        Opcode: 0,
+        AA: false,
+        TC: false,
+        RD: true,
+        RA: false,
+        Z: 0,
+        // RCODE: 0,
+        QDCOUNT: 1,
+        ANCOUNT: 0,
+        NSCOUNT: 0,
+        ARCOUNT: 0,
+        questions: [
+            {
+                domainName: 'google.com',
+                qtype: 1,
+                qclass: 1
+            }
+        ]
+    }
+
+    const tlsOptions = {
+        port: 853,
+        host: '8.8.8.8'
+    }
+
+    const myEmitter = require('../event-emitter');
+
+    const onData = (data) => {
+        console.log("data gotten over TLS connection in async function v2:", data);
+
+        // Process the case if server responds with several DNS response messages in one TCP or TLS response,
+        // so that each DNS response message will arrive in a view: 2 bytes message length, then message bytes themselves.
+        // Though, not clear for me yet, if server may respond with several DNS response messages in single TCP or TLS message
+        // in practise.
+        // ToDo how to test it? Didn't meet such case yet.
+        let dataCurrentPos = 0;
+        try {
+            while (dataCurrentPos < data.length) {
+                const respLen = data.readUInt16BE(dataCurrentPos);
+                respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
+                const respData = functions.parseDnsMessageBytes(respBuf);
+
+                const requestKey_resp = functions.getRequestIdentifier(respData);
+                myEmitter.emit('remote_tls_data_gotten', requestKey_resp, respData);
+
+                dataCurrentPos += 2 + respLen;
+            }
+
+            return;
+        }
+        catch (err) {
+            console.log();
+            console.group();
+            console.error(err);
+            console.log('DNS response binary data:')
+            console.log(functions.binDataToString(data));
+            console.groupEnd();
+            console.log();
+
+            // while in development, throw error after logging, for not to miss it
+            // throw err;
+            reject(err);
+        }
+    }
+
+    const tlsClient = new TlsClient(tlsOptions, onData);
+
+    const responseMessageFields = await functions.getRemoteDnsTlsResponseBin(dnsMessageFields, tlsClient);
+
+    const socket = tlsClient.getSocket();
+    console.log('socket:', socket)
+    socket.end(null, null, () => { console.log('socket closed!') });
+
+    console.log();
+    console.log('Async DNS request as function');
+    console.log("Got upstream DNS response:");
+    console.log(responseMessageFields);
+    console.log();
+    return;
 })();
