@@ -28,6 +28,7 @@ exports.getRequestIdentifier = getRequestIdentifier;
 exports.binDataToString = binDataToString;
 exports._getRemoteDnsTlsResponseBin = _getRemoteDnsTlsResponseBin;
 exports.getRemoteDnsTlsResponseBin = getRemoteDnsTlsResponseBin;
+exports.processIncomingDataAndEmitEvent = processIncomingDataAndEmitEvent;
 
 const blankMessageFields = {
     ID: 0,
@@ -436,9 +437,8 @@ async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP, remotePort) {
 }
 
 
-
+// #region
 const localRequestsAwaiting = new Map();
-
 async function _getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
     // const localReqParams = {
     //     domainName: dnsMessageFields.questions[0].domainName,
@@ -523,6 +523,51 @@ async function _getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
     }).then((msg) => { return msg });
 
     return promise;
+}
+// #endregion
+
+
+/**
+ * Should be used in conjunction with getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient),
+ * where remoteTlsClient has processIncomingDataAndEmitEvent(data) set as onData callback.
+ */ 
+// const onData = (data) => {
+function processIncomingDataAndEmitEvent(data) {
+    console.log("data gotten over TLS connection in async function v2:", data);
+
+    // Process the case if server responds with several DNS response messages in one TCP or TLS response,
+    // so that each DNS response message will arrive in a view: 2 bytes message length, then message bytes themselves.
+    // Though, not clear for me yet, if server may respond with several DNS response messages in single TCP or TLS message
+    // in practise.
+    // ToDo how to test it? Didn't meet such case yet.
+    let dataCurrentPos = 0;
+    try {
+        while (dataCurrentPos < data.length) {
+            const respLen = data.readUInt16BE(dataCurrentPos);
+            respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
+            const respData = parseDnsMessageBytes(respBuf);
+
+            const requestKey_resp = getRequestIdentifier(respData);
+            myEmitter.emit('remote_tls_data_gotten', requestKey_resp, respData);
+
+            dataCurrentPos += 2 + respLen;
+        }
+
+        return;
+    }
+    catch (err) {
+        console.log();
+        console.group();
+        console.error(err);
+        console.log('DNS response binary data:')
+        console.log(binDataToString(data));
+        console.groupEnd();
+        console.log();
+
+        // while in development, throw error after logging, for not to miss it
+        // throw err;
+        reject(err);
+    }
 }
 
 
