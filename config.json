@@ -20,7 +20,7 @@
             "ip": "127.0.0.1"
         },
         {
-            "comment": "CNAME requests for google.ru as google.com",
+            "comment": "CNAME requests for google.ru as yandex.ru",
             "hostName": "google.ru",
             "cname": "yandex.ru"
         }

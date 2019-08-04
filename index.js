@@ -204,23 +204,49 @@ const myEmitter = new MyEmitter();
                     ttl: forgedRequestsTTL,
                     rdlength: rdlength,
                     rdata_bin: rdata
-                    // IPv4: forgeIp
                 });
 
-                // ToDo here should be returned an up-level (either forged) answer for CNAME domain
-                // answers.push({
-                //     domainName: question.domainName,
-                //     type: question.qtype,   // 1
-                //     class: question.qclass,
-                //     ttl: forgedRequestsTTL,
-                //     rdlength: 4,
-                //     rdata_bin: functions.ip4StringToBuffer('127.0.0.3'),
-                //     IPv4: '127.0.0.3'
-                // });
+                const outerRequestFields = {
+                    ID: Math.floor((Math.random() * 65535) + 1),
+                    QR: false,
+                    Opcode: 0,
+                    AA: false,
+                    TC: false,
+                    RD: true,
+                    RA: false,
+                    Z: 0,
+                    // RCODE: 0,
+                    QDCOUNT: 1,
+                    ANCOUNT: 0,
+                    NSCOUNT: 0,
+                    ARCOUNT: 0,
+                    questions: [
+                        {
+                            domainName: forgeCNAME,
+                            qtype: 1,
+                            qclass: 1
+                        }
+                    ]
+                }
+
+                let outerResponseBuf;
+                if (config.remoteDnsConnectionMode == "udp") {
+                    const outerRequestBin = functions.composeDnsMessageBin(outerRequestFields);
+                    outerResponseBuf = await functions.getRemoteDnsResponseBin(outerRequestBin, upstreamDnsIP, upstreamDnsPort);
+                }
+                else if (config.remoteDnsConnectionMode == "tls") {
+                    outerResponseBuf = await functions.getRemoteDnsTlsResponseBin(outerRequestFields, remoteTlsClient);
+                }
+
+                const outerResponseFields = functions.parseDnsMessageBytes(outerResponseBuf);
+                outerResponseFields.answers.forEach( answer => {
+                    answers.push(answer);
+                });
+
             } else {
                 // throw exception
                 throw new Error(
-                    'For ' + question.domainName + ' should be specified '
+                    'For ' + question.domainName + ', should be specified '
                     + '\'ip\' either \'cname\' field in config'
                 );
             };
@@ -260,26 +286,6 @@ const myEmitter = new MyEmitter();
                 });
             }
             else if (config.remoteDnsConnectionMode == "tls") {
-                // const localReqParams = {
-                //     domainName: dnsRequest.questions[0].domainName,
-                //     address: linfo.address,
-                //     port: linfo.port
-                // };
-
-                // const requestKey = functions.getRequestIdentifier(dnsRequest);
-                // localRequestsAwaiting.set(requestKey, localReqParams);
-
-                // const lenBuf = Buffer.alloc(2);
-                // lenBuf.writeUInt16BE(localReq.length);
-                // const prepReqBuf = Buffer.concat([lenBuf, localReq], 2 + localReq.length);
-
-                // // // remoteTlsClient.write(lenBuf);
-                // // // remoteTlsClient.write(localReq);
-                // remoteTlsClient.write(prepReqBuf);   // as of RFC-7766 p.8, length bytes and request data should be send in single "write" call
-
-
-                // Should be both Bin and Fields resp data returned by the function? It may come handy.
-
                 const responseBuf = await functions.getRemoteDnsTlsResponseBin(dnsRequest, remoteTlsClient);
                 server.send(responseBuf, linfo.port, linfo.address, (err, bytes) => {
                     // add some logic, maybe?
