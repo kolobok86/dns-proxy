@@ -548,7 +548,7 @@ function processIncomingDataAndEmitEvent(data) {
             const respData = parseDnsMessageBytes(respBuf);
 
             const requestKey_resp = getRequestIdentifier(respData);
-            myEmitter.emit('remote_tls_data_gotten', requestKey_resp, respData);
+            myEmitter.emit('remote_tls_data_gotten', requestKey_resp, respBuf, respData);
 
             dataCurrentPos += 2 + respLen;
         }
@@ -583,13 +583,13 @@ async function getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
     remoteTlsClient.write(prepReqBuf);   // as of RFC-7766 p.8, length bytes and request data should be send in single "write" call
 
     const promise = new Promise((resolve, reject) => {
-        myEmitter.on('remote_tls_data_gotten', (requestKey_resp, respData) => {
+        myEmitter.on('remote_tls_data_gotten', (requestKey_resp, respBuf, respData) => {
             if (requestKey_resp === requestKey) {
-                resolve(respData);
+                resolve(respBuf);
             }
         })
-    }).then((msg) => {
-        return msg
+    }).then((respBuf) => {
+        return respBuf
     });
 
     return promise;
