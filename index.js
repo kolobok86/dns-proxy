@@ -219,7 +219,7 @@ const myEmitter = new MyEmitter();
                 // });
             } else {
                 // throw exception
-                throw new Execption(
+                throw new Error(
                     'For ' + question.domainName + ' should be specified '
                     + '\'ip\' either \'cname\' field in config'
                 );
@@ -278,7 +278,7 @@ const myEmitter = new MyEmitter();
                 // remoteTlsClient.write(prepReqBuf);   // as of RFC-7766 p.8, length bytes and request data should be send in single "write" call
 
 
-                Should be both Bin and Fields resp data returned by the function? It may come handy.
+                // Should be both Bin and Fields resp data returned by the function? It may come handy.
 
                 const responseBuf = await functions.getRemoteDnsTlsResponseBin(dnsRequest, remoteTlsClient);
                 server.send(responseBuf, linfo.port, linfo.address, (err, bytes) => {

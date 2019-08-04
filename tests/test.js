@@ -51,7 +51,7 @@ const TlsClient = require('../tls-client');
         console.log('\tPASS: buffers match');
     }
     else {
-        throw new Exception('Error: buffers does not match');
+        throw new Error('Error: buffers does not match');
     };
 
     console.log();
