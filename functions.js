@@ -273,7 +273,14 @@ function parseDnsMessageBytes (buf) {
                 }
                 record['IPv4'] = ipStr.substring(1);  // rid of first '.'
 
-            } else {    // just treat drata as raw bin data, do not parse
+            }
+            else if (record['type'] === 5 && record['class'] === 1) {
+                // CNAME
+                record['CNAME'] = readDomainName(buf, currentByteIndex);
+                currentByteIndex += record['rdlength'];
+            }
+            else {
+                // just treat drata as raw bin data, do not parse
                 currentByteIndex += record['rdlength'];
             }
 
@@ -530,7 +537,7 @@ async function _getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
 /**
  * Should be used in conjunction with getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient),
  * where remoteTlsClient has processIncomingDataAndEmitEvent(data) set as onData callback.
- */ 
+ */
 // const onData = (data) => {
 function processIncomingDataAndEmitEvent(data) {
     console.log("data gotten over TLS connection in async function v2:", data);
