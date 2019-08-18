@@ -201,3 +201,26 @@ const TlsClient = require('../tls-client');
     console.log();
     return;
 })();
+
+
+(function() {
+
+    // DNS response on cname request
+    const buf = Buffer.from([
+        0, 65, 129, 128, 0, 1, 0, 2,
+        0, 0, 0, 0, 4, 119, 119, 119,
+        119, 9, 107, 111, 108, 111, 107,
+        111, 108, 111, 118, 3, 112, 114,
+        111, 0, 0, 1, 0, 1, 192, 12, 0,
+        5, 0, 1, 0, 0, 1, 43, 0, 2, 192,
+        17, 192, 17, 0, 1, 0, 1, 0, 0,
+        1, 43, 0, 4, 5, 188, 232, 60
+    ]);
+
+    const messageFields = functions.parseDnsMessageBytes(buf);
+
+    console.log();
+    console.log('CNAME response:');
+    console.log(messageFields);
+    console.log();
+})();

@@ -540,7 +540,7 @@ async function _getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
  */
 // const onData = (data) => {
 function processIncomingDataAndEmitEvent(data) {
-    console.log("data gotten over TLS connection in async function v2:", data);
+    // console.log("data gotten over TLS connection in async function v2:", data);
 
     // Process the case if server responds with several DNS response messages in one TCP or TLS response,
     // so that each DNS response message will arrive in a view: 2 bytes message length, then message bytes themselves.
