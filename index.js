@@ -206,42 +206,51 @@ const myEmitter = new MyEmitter();
                     rdata_bin: rdata
                 });
 
-                const outerRequestFields = {
-                    ID: Math.floor((Math.random() * 65535) + 1),
-                    QR: false,
-                    Opcode: 0,
-                    AA: false,
-                    TC: false,
-                    RD: true,
-                    RA: false,
-                    Z: 0,
-                    // RCODE: 0,
-                    QDCOUNT: 1,
-                    ANCOUNT: 0,
-                    NSCOUNT: 0,
-                    ARCOUNT: 0,
-                    questions: [
-                        {
-                            domainName: forgeCNAME,
-                            qtype: 1,
-                            qclass: 1
-                        }
-                    ]
-                }
+                // if request QTYPE is 5 'CNAME', then requester awaits just canonical host name,
+                // no need to make further DNS resolve.
+                // Otherwise (QTYPE is 1), resolve IP address for canonical hostname from uplevel DNS server
+                // and add this data to canonical hostname.
+                if (question.qtype === 1) {
 
-                let outerResponseBuf;
-                if (config.remoteDnsConnectionMode == "udp") {
-                    const outerRequestBin = functions.composeDnsMessageBin(outerRequestFields);
-                    outerResponseBuf = await functions.getRemoteDnsResponseBin(outerRequestBin, upstreamDnsIP, upstreamDnsPort);
-                }
-                else if (config.remoteDnsConnectionMode == "tls") {
-                    outerResponseBuf = await functions.getRemoteDnsTlsResponseBin(outerRequestFields, remoteTlsClient);
-                }
+                    console.log('question 1, answer CNAME!');
 
-                const outerResponseFields = functions.parseDnsMessageBytes(outerResponseBuf);
-                outerResponseFields.answers.forEach( answer => {
-                    answers.push(answer);
-                });
+                    const outerRequestFields = {
+                        ID: Math.floor((Math.random() * 65535) + 1),
+                        QR: false,
+                        Opcode: 0,
+                        AA: false,
+                        TC: false,
+                        RD: true,
+                        RA: false,
+                        Z: 0,
+                        // RCODE: 0,
+                        QDCOUNT: 1,
+                        ANCOUNT: 0,
+                        NSCOUNT: 0,
+                        ARCOUNT: 0,
+                        questions: [
+                            {
+                                domainName: forgeCNAME,
+                                qtype: 1,
+                                qclass: 1
+                            }
+                        ]
+                    }
+
+                    let outerResponseBuf;
+                    if (config.remoteDnsConnectionMode == "udp") {
+                        const outerRequestBin = functions.composeDnsMessageBin(outerRequestFields);
+                        outerResponseBuf = await functions.getRemoteDnsResponseBin(outerRequestBin, upstreamDnsIP, upstreamDnsPort);
+                    }
+                    else if (config.remoteDnsConnectionMode == "tls") {
+                        outerResponseBuf = await functions.getRemoteDnsTlsResponseBin(outerRequestFields, remoteTlsClient);
+                    }
+
+                    const outerResponseFields = functions.parseDnsMessageBytes(outerResponseBuf);
+                    outerResponseFields.answers.forEach( answer => {
+                        answers.push(answer);
+                    });
+                }
 
             } else {
                 // throw exception
@@ -270,6 +279,12 @@ const myEmitter = new MyEmitter();
                 questions: dnsRequest.questions,
                 answers: answers
             }
+
+            console.log();
+            console.log('Prepared local DNS response:');
+            console.log(localDnsResponse);
+            console.log();
+
 
             const responseBuf = functions.composeDnsMessageBin(localDnsResponse);
 
