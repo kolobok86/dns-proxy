@@ -1,5 +1,5 @@
 {
-    "remoteDnsConnectionMode": "udp",
+    "remoteDnsConnectionMode": "tls",
     "upstreamDnsIP": "8.8.8.8",
     "upstreamDnsPort": 53,
     "localDnsPort": 53,
@@ -10,19 +10,19 @@
 
     "requestsToForge": [
         {
-            "comment": "Serve requests to yandex.ru locally",
-            "hostName": "yandex.ru",
+            "comment": "Serve requests to example.com locally",
+            "hostName": "example.com",
             "ip": "127.0.0.1"
         },
         {
-            "comment": "Serve requests to google.com locally",
-            "hostName": "google.com",
+            "comment": "Serve requests to example123.com locally",
+            "hostName": "example123.com",
             "ip": "127.0.0.1"
         },
         {
-            "comment": "CNAME requests for google.ru as yandex.ru",
-            "hostName": "google.ru",
-            "cname": "yandex.ru"
+            "comment": "Serve requests to 'prod.example.com' like it is an alias for canonical name 'dev.example.com'",
+            "hostName": "prod.example.com",
+            "cname": "dev.example.com"
         }
     ]
 }

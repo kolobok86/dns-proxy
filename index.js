@@ -21,12 +21,6 @@ const EventEmitter = require('events');
 
 // ToDo change question.domainName to qname, for proper semantics
 
-class MyEmitter extends EventEmitter {};
-
-const myEmitter = new MyEmitter();
-
-// const REMOTE_TLS_DATA_GOTTEN_EVENT = 'remote_tls_data_gotten'
-
 (async function() {
 
     const settings = await getConfig();
@@ -37,8 +31,6 @@ const myEmitter = new MyEmitter();
     const upstreamDnsPort = config.upstreamDnsPort;
     const forgedRequestsTTL = config.forgedRequestsTTL;
 
-    const localRequestsAwaiting = new Map();
-
     let remoteTlsClient;
 
     if (config.remoteDnsConnectionMode == "tls") {
@@ -47,104 +39,6 @@ const myEmitter = new MyEmitter();
             host: config.upstreamDnsTlsHost
         }
 
-//#region
-        // const onData = (data) => {
-        //     console.log("data gotten over TLS connection:", data);
-
-        //     // Process the case if server responds with several DNS response messages in one TCP or TLS response,
-        //     // so that each DNS response message will arrive in a view: 2 bytes message length, then message bytes themselves.
-        //     // Though, not clear for me yet, if server may respond with several DNS response messages in single TCP or TLS message
-        //     // in practise.
-        //     // ToDo how to test it? Didn't meet such case yet.
-        //     let dataCurrentPos = 0;
-        //     try {
-        //         while (dataCurrentPos < data.length) {
-        //             const respLen = data.readUInt16BE(dataCurrentPos);
-        //             console.log('response length:', respLen);
-
-        //             respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
-        //             const respData = functions.parseDnsMessageBytes(respBuf);
-
-        //             console.log(respData);
-
-        //             const requestKey = functions.getRequestIdentifier(respData);
-        //             const localResponseParams = localRequestsAwaiting.get(requestKey);
-        //             localRequestsAwaiting.delete(requestKey);
-
-        //             server.send(respBuf, localResponseParams.port, localResponseParams.address, (err, bytesNum) => {});
-
-        //             dataCurrentPos += 2 + respLen;
-        //         }
-        //     }
-        //     catch (err) {
-        //         console.log();
-        //         console.group();
-        //         console.error(err);
-        //         console.log('DNS response binary data:')
-        //         console.log(functions.binDataToString(data));
-        //         console.groupEnd();
-        //         console.log();
-
-        //         // while in development, throw error after logging, for not to miss it
-        //         throw err;
-        //     }
-        // };
-
-        // const onData = (data) => {
-        //     console.log("data gotten over TLS connection in async function:", data);
-
-        //     // Process the case if server responds with several DNS response messages in one TCP or TLS response,
-        //     // so that each DNS response message will arrive in a view: 2 bytes message length, then message bytes themselves.
-        //     // Though, not clear for me yet, if server may respond with several DNS response messages in single TCP or TLS message
-        //     // in practise.
-        //     // ToDo how to test it? Didn't meet such case yet.
-        //     let dataCurrentPos = 0;
-        //     try {
-        //         while (dataCurrentPos < data.length) {
-        //             const respLen = data.readUInt16BE(dataCurrentPos);
-        //             console.log('response length:', respLen);
-
-        //             respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
-        //             const respData = parseDnsMessageBytes(respBuf);
-
-        //             console.log(respData);
-
-        //             const requestKey_resp = getRequestIdentifier(respData);
-        //             // const localResponseParams = localRequestsAwaiting.get(requestKey);
-        //             // localRequestsAwaiting.delete(requestKey);
-
-        //             // server.send(respBuf, localResponseParams.port, localResponseParams.address, (err, bytesNum) => {});
-
-        //             // place event emitter here:
-        //             myEmitter.emit('remote_tls_data_gotten', requestKey_resp, respData);
-
-        //             // stopped here. Add event listener in functions, function getRemoteDnsTlsResponseBin () {}
-
-
-        //             if (requestKey == requestKey_resp) {
-        //                 resolve(respData);
-        //                 return;
-        //             } else {
-        //                 //
-        //             }
-        //             dataCurrentPos += 2 + respLen;
-        //         }
-        //     }
-        //     catch (err) {
-        //         console.log();
-        //         console.group();
-        //         console.error(err);
-        //         console.log('DNS response binary data:')
-        //         console.log(binDataToString(data));
-        //         console.groupEnd();
-        //         console.log();
-
-        //         // while in development, throw error after logging, for not to miss it
-        //         // throw err;
-        //         reject(err);
-        //     }
-        // }
-//#enregion
         const onData = functions.processIncomingDataAndEmitEvent;
         remoteTlsClient = new TlsClient(options, onData);
     }
