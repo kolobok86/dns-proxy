@@ -1,40 +1,46 @@
 # DNS Proxy
 
-DNS proxy running on NodeJS. Acts as DNS server running locally, returning specified IP address for given host names, and normal DNS response from upstream DNS server for others.
+DNS proxy running on NodeJS. Acts as DNS server running locally, that returns specified fake responses for given particular host names, and real responses from upstream DNS server for others. Currently, the application supports forging responses of type "A" (IP address) and "CNAME" (canonical name).
 
 
 ## Usage:
-In application root directory, run in console:
+To start the application, open console in application root directory and run the command:
 
 ```sh
 node index
 
 ```
 
-On PC, which DNS requests should be proxied, set the IP address of PC with DNS Proxy running. If this is one and the same PC, set 127.0.0.1.
+On PC whose DNS requests should be proxied, set the IP address of PC running DNS Proxy. If this is one and the same PC, set `127.0.0.1`.
 
 ## Configuration File Options
 
-Configuration is stored in `config.json` file in root directory of the project. The file can be edited and saved when the proxy is running, the updated configuration will be fetched on the fly, without restarting. The only exclusions are:
+Configuration is stored in `config.json` file in root directory of the project. The file may be edited and saved while the proxy is running, the updated configuration will be fetched on the fly in this case, with no need to restart the application. The only exclusions are:
  * switching connection type from 'udp' to 'tls',
+ * changing local connection parameters,
  * changing TLS connection parameters.
 
 These changes will require restarting of the application.
 
-As this is JSON file, coments are not supported. As a dirty trick, you can add some arbitrarily named field name, and fill its value with comment text, like:
+As configuration is stored in JSON file, coments are not supported. As a workaround, one may add some arbitrarily named field, and fill its value with comment text, like:
 
 ```json
 "comment_1": "this is comment"
 ```
 
 
-## Forging DNS response for particular requesed hosts
-Hostnames and related responses are specified in `requestsToForge` secion of the config. This section is in form of JSON array, where each target hostname with desired response is specified in separate array item. The hostname to forge response for should be specified in `hostName` field of that item, and other fields define response that will be returned when that particulad hostname is requested. Currently, responses of type "A" (IP address) and "CNAME" (canonical name) are supported.
+## Forging DNS response for particular requested hosts
+Hostnames and related responses are specified in `requestsToForge` section of the config. This section is in form of JSON array, where each target hostname is specified in separate array item, along with given response. The hostname to forge response for should be specified in `hostName` field of that item. Other fields of the item define parameters of the response that will be returned when that particulad hostname is requested.
 
-Changes in this section of config are applied on the go, no need to restart the application.
+Responses of type "A" (IP address) and "CNAME" (canonical name) are supported.
+
+Changes in this section are applied on the fly, without restarting the application.
+
+### Matching incoming requests' hostnames with these in `requestsToForge` section
+Currently, each request, whose hostname contans item's `hostName` value, will match that item. I.e., for item with `"hostName": "example.com"`, any of incoming requests with hostnames `example.com`, `www.example.com`, `example.com.net` will match. This will be improved in future releases, enabling usage of asterisk `*` substitutions and / or regular expressions.
 
 ### Forge IP address in response
-Hosts, which IP address should be replaced with specified one, and the fake IP's are stored in config field `requestsToForge`:
+If you need to return specific IP address for given hostname, create a record in `requestsToForge` section, contaning the hostname in `hostName` field, and IP address in `ip` field respectively, like that:
 ```json
      "requestsToForge": [
         {
@@ -44,51 +50,47 @@ Hosts, which IP address should be replaced with specified one, and the fake IP's
         },
         {
             "comment": "Serve requests to example123.com locally",
-            "hostName": "example123.com",
+            "hostName": "another-example.com",
             "ip": "127.0.0.1"
         }
     ]
 ```
-Edit it according to your needs, specifying proper `hostName`s and `ip`'s. Currently, any requested hostname, containing given value, will match the pattern. I.e., for `"hostName": "example123.com"`, any of `example123.com`, `www.example123.com`, `example123.com.net` will match. This will be improved in future releases, enabling usage of asterisk * substitutions and / or regular expressions.
+Edit it according to your needs, specifying proper `hostName`s and `ip`'s.
 
-Currently, only one IP can be set for hostname.
+Currently, only one IP can be set per hostname.
 
 
-### Fake CNAME response
-If `cname` field is specified, then response for `hostName` request will act like CNAME one. I.e., response will contain hostname specified in `cname` field as canonical name for requested host.
+### Forge CNAME response
+Instead of fake IP, there is an ability to return response of CNAME type for requests matching given target hostname.
+In other words, if you need to return specific canonical name for given hostname, as if the hostname itself was an alias for the name you're returning, then add a record contaning `hostName` field with that given hostname (that we'll pretend is an alias), and `cname` field with fake canonical hostname, to `requestsToForge` section. Like the following:
 
-If request itself is of type CNAME, then response will contain only canonical name. If request is of type A (host address), then response, in addition to canonical name, will contain IP address(es) for it, resolving them with up-level DNS server. See explanation in [RFC-1034, Section 5.2.2](https://tools.ietf.org/html/rfc1034#section-5.2.2).
-
-For instance, if your config's section `requestsToForge` contains a record:
 ```json
      "requestsToForge": [
         {
             "comment": "Serve requests to 'prod.example.com' like it is an alias for canonical name 'dev.example.com'",
-            "hostName": "prod.example.com",
+            "hostName": "example.com",
             "cname": "dev.example.com"
         }
     ]
 ```
-Then, If DNS proxy gets local request of type A and domain name _"prod.example.com"_, it will resolve IP addresses for domain _"dev.example.com"_, and compose response to local client, containing information that canonical name for alias _"prod.example.com"_ is _"dev.example.com"_, and real (not forged) IP's for _"dev.example.com"_ domain.
+
+If incoming request itself is of type CNAME, then forged response for it will contain fake canonical name only. If request is of type A (IP address), then response, in addition to canonical name, will contain IP address(es) for it, resolving them with up-level DNS server. See explanation in [RFC-1034, Section 5.2.2](https://tools.ietf.org/html/rfc1034#section-5.2.2).
 
 
-This is useful for cases when you need to get IP address(es) from domain you're using in _development_, and supply them to local application like they belong to _production_ one, withoud setting these IP(s) in config manually. Say, the IP is subject to change from time to time, or there are several IP's.
-
-
-**Please mention:** Three example entrances mentioned above will present in default config as example, feel free to remove them before using the application.
+**Please mention:** Three example entrances mentioned above present in default config as example, feel free to remove them before using the application.
 
 
 ### Upstream Connection Parameters
- - `remoteDnsConnectionMode` [`udp` or `tls`]: connection protocol for upstream DNS server, UDP and TLS are currently supported. Default `udp`.
- - `upstreamDnsIP`: IP address of upstream DNS server for **UDP** protocol (only one address supported for now). Default `8.8.8.8` (Google DNS).
- - `upstreamDnsPort`: port to connect on upstream DNS server with **UDP** protocol. Default `53`.
- - `upstreamDnsTlsHost`: IP address of upstream DNS server for **TLS** protocol (only one address supported for now). Default `8.8.8.8` (Google DNS).
+ - `remoteDnsConnectionMode` [`udp` or `tls`]: connection protocol for upstream DNS server. UDP and TLS are currently supported. Default: `udp`.
+ - `upstreamDnsIP`: IP address of upstream DNS server for **UDP** protocol (only one address supported for now). Default: `8.8.8.8` (Google DNS).
+ - `upstreamDnsPort`: port to connect on upstream DNS server with **UDP** protocol. Default: `53`.
+ - `upstreamDnsTlsHost`: IP address of upstream DNS server for **TLS** protocol (only one address supported for now). Default: `8.8.8.8` (Google DNS).
  - `upstreamDnsTlsPort`: port to connect on upstream DNS server with **TLS** protocol. Default `853`.
 
 
 ### Local Connection Parameters
- - `localDnsPort`: local port for incoming connections. Default `53`.
- - `forgedRequestsTTL`: TTL (time to live) for forged responses. Default 10 sec.
+ - `localDnsPort`: local port for incoming connections. Default: `53`.
+ - `forgedRequestsTTL`: TTL (time to live) for forged responses, in seconds. Default: `10`.
 
 
 ## Tests

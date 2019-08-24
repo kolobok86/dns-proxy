@@ -1,5 +1,5 @@
 {
-    "remoteDnsConnectionMode": "tls",
+    "remoteDnsConnectionMode": "udp",
     "upstreamDnsIP": "8.8.8.8",
     "upstreamDnsPort": 53,
     "localDnsPort": 53,
