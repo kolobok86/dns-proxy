@@ -128,7 +128,7 @@ const TlsClient = require('./tls-client');
 
             const localDnsResponse = {
                 ID: dnsRequest.ID,
-                QR: dnsRequest.QR,
+                QR: true,
                 Opcode: dnsRequest.Opcode,
                 AA: dnsRequest.AA,
                 TC: false,      // dnsRequest.TC,
@@ -139,7 +139,7 @@ const TlsClient = require('./tls-client');
                 QDCOUNT: dnsRequest.QDCOUNT,
                 ANCOUNT: answers.length,
                 NSCOUNT: dnsRequest.NSCOUNT,
-                ARCOUNT: dnsRequest.ARCOUNT,
+                ARCOUNT: 0,     // we don't create records in Additional section
                 questions: dnsRequest.questions,
                 answers: answers
             }
