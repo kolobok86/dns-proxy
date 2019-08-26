@@ -145,9 +145,12 @@ const EventEmitter = require('events');
 
             } else {
                 // throw exception
-                throw new Error(
-                    'For ' + question.domainName + ', should be specified '
-                    + '\'ip\' either \'cname\' field in config'
+                // throw new Error(
+                //     'For ' + question.domainName + ', should be specified '
+                //     + '\'ip\' either \'cname\' field in config'
+                // );
+                console.warn(
+                    'For ' + question.domainName + ', \'ip\' either \'cname\' field should be specified in config.json'
                 );
             };
 

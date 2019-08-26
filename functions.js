@@ -30,6 +30,8 @@ exports._getRemoteDnsTlsResponseBin = _getRemoteDnsTlsResponseBin;
 exports.getRemoteDnsTlsResponseBin = getRemoteDnsTlsResponseBin;
 exports.processIncomingDataAndEmitEvent = processIncomingDataAndEmitEvent;
 
+const REMOTE_DNS_RESPONSE_TIMEOUT = 3000;
+
 const blankMessageFields = {
     ID: 0,
     QR: false,
@@ -432,7 +434,17 @@ async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP, remotePort) {
     });
 
     const promise = new Promise((resolve, reject) => {
+        // Set timeout to clear client and related event listener after
+        const timeoutId = setTimeout(
+            () => {
+                client.close();
+                reject(new Error(`Remote DNS over UDP timeout ${REMOTE_DNS_RESPONSE_TIMEOUT} ms`))
+            },
+            REMOTE_DNS_RESPONSE_TIMEOUT
+        );
+
         client.on("message", function (msg, rinfo) {
+            clearTimeout(timeoutId);
             client.close();
             resolve(msg);
         });
@@ -445,7 +457,7 @@ async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP, remotePort) {
 
 
 // #region
-const localRequestsAwaiting = new Map();
+// First version of function
 async function _getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
 
     const requestKey = getRequestIdentifier(dnsMessageFields);
@@ -505,15 +517,6 @@ async function _getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
                 }
             }
         )
-
-// stopped here
-
-        // client.on("message", function (msg, rinfo) {
-        //     client.close();
-        //     resolve(msg);
-        // });
-
-        // client.send(dnsMessageBin, remotePort, remoteIP, function(err, bytesCount) {});
     }).then((msg) => { return msg });
 
     return promise;
@@ -560,14 +563,12 @@ function processIncomingDataAndEmitEvent(data) {
 
         // while in development, throw error after logging, for not to miss it
         // throw err;
-        reject(err);
     }
 }
 
 
 async function getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
     const requestKey = getRequestIdentifier(dnsMessageFields);
-    // localRequestsAwaiting.set(requestKey, localReqParams);
 
     const lenBuf = Buffer.alloc(2);
     const dnsMessageBuf = composeDnsMessageBin(dnsMessageFields);
@@ -578,7 +579,16 @@ async function getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
 
     const promise = new Promise((resolve, reject) => {
         myEmitter.on('remote_tls_data_gotten', (requestKey_resp, respBuf, respData) => {
+            // Set timeout to clear event listener after
+            const timeoutId = setTimeout(
+                () => {
+                    reject(new Error(`Remote DNS over TLS timeout ${REMOTE_DNS_RESPONSE_TIMEOUT} ms`))
+                },
+                REMOTE_DNS_RESPONSE_TIMEOUT
+            );
+
             if (requestKey_resp === requestKey) {
+                clearTimeout(timeoutId)
                 resolve(respBuf);
             }
         })
