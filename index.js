@@ -105,9 +105,6 @@ const EventEmitter = require('events');
                 // Otherwise (QTYPE is 1), resolve IP address for canonical hostname from uplevel DNS server
                 // and add this data to canonical hostname.
                 if (question.qtype === 1) {
-
-                    console.log('question 1, answer CNAME!');
-
                     const outerRequestFields = {
                         ID: Math.floor((Math.random() * 65535) + 1),
                         QR: false,
@@ -157,7 +154,7 @@ const EventEmitter = require('events');
 
             const localDnsResponse = {
                 ID: dnsRequest.ID,
-                QR: dnsRequest.QR,
+                QR: true,
                 Opcode: dnsRequest.Opcode,
                 AA: dnsRequest.AA,
                 TC: false,      // dnsRequest.TC,
@@ -169,7 +166,7 @@ const EventEmitter = require('events');
                 QDCOUNT: dnsRequest.QDCOUNT,
                 ANCOUNT: answers.length,
                 NSCOUNT: dnsRequest.NSCOUNT,
-                ARCOUNT: dnsRequest.ARCOUNT,
+                ARCOUNT: 0,     // as we're not providing additional records section
                 questions: dnsRequest.questions,
                 answers: answers
             }
