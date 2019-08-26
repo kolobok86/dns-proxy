@@ -447,22 +447,14 @@ async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP, remotePort) {
 // #region
 const localRequestsAwaiting = new Map();
 async function _getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
-    // const localReqParams = {
-    //     domainName: dnsMessageFields.questions[0].domainName,
-    //     address: linfo.address,
-    //     port: linfo.port
-    // };
 
     const requestKey = getRequestIdentifier(dnsMessageFields);
-    // localRequestsAwaiting.set(requestKey, localReqParams);
 
     const lenBuf = Buffer.alloc(2);
     const dnsMessageBuf = composeDnsMessageBin(dnsMessageFields);
     lenBuf.writeUInt16BE(dnsMessageBuf.length);
     const prepReqBuf = Buffer.concat([lenBuf, dnsMessageBuf], 2 + dnsMessageBuf.length);
 
-    // // remoteTlsClient.write(lenBuf);
-    // // remoteTlsClient.write(localReq);
     remoteTlsClient.write(prepReqBuf);   // as of RFC-7766 p.8, length bytes and request data should be send in single "write" call
 
     const socket = remoteTlsClient.getSocket();
@@ -489,17 +481,12 @@ async function _getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
                         console.log(respData);
 
                         const requestKey_resp = getRequestIdentifier(respData);
-                        // const localResponseParams = localRequestsAwaiting.get(requestKey);
-                        // localRequestsAwaiting.delete(requestKey);
-
-                        // server.send(respBuf, localResponseParams.port, localResponseParams.address, (err, bytesNum) => {});
 
                         if (requestKey == requestKey_resp) {
                             resolve(respData);
                             return;
-                        } else {
-                            //
                         }
+
                         dataCurrentPos += 2 + respLen;
                     }
                 }
