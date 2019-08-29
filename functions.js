@@ -269,7 +269,7 @@ function parseDnsMessageBytes (buf) {
                 // if rdata contains IPv4 address,
                 // read IP bytes to string IP representation
                 let ipStr = '';
-                for (ipv4ByteIndex = 0; ipv4ByteIndex < 4; ipv4ByteIndex++) {
+                for (let ipv4ByteIndex = 0; ipv4ByteIndex < 4; ipv4ByteIndex++) {
                     ipStr += '.' + buf.readUInt8(currentByteIndex).toString();
                     currentByteIndex++;
                 }
@@ -294,7 +294,7 @@ function parseDnsMessageBytes (buf) {
 }
 
 function composeDnsMessageBin(messageFields) {
-    const buf = new Buffer.alloc(512);      // UDP message max size is 512 bytes (с) RFC 1035 2.3.4. Size limits
+    const buf = Buffer.alloc(512);      // UDP message max size is 512 bytes (с) RFC 1035 2.3.4. Size limits
     let currentByteIndex = 0;        // index of byte in buffer, which is currently written
 
     buf.writeUInt16BE(messageFields.ID, currentByteIndex);
@@ -438,7 +438,11 @@ async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP, remotePort) {
         const timeoutId = setTimeout(
             () => {
                 client.close();
-                reject(new Error(`Remote DNS over UDP timeout ${REMOTE_DNS_RESPONSE_TIMEOUT} ms`))
+                const dnsMessageFields = parseDnsMessageBytes(dnsMessageBin);
+                reject(new Error(
+                    `Remote DNS over UDP timeout ${REMOTE_DNS_RESPONSE_TIMEOUT} ms; ` +
+                    `DNS question: ${JSON.stringify(dnsMessageFields.questions[0])}`
+                ))
             },
             REMOTE_DNS_RESPONSE_TIMEOUT
         );
@@ -487,7 +491,7 @@ async function _getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
                         const respLen = data.readUInt16BE(dataCurrentPos);
                         console.log('response length:', respLen);
 
-                        respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
+                        const respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
                         const respData = parseDnsMessageBytes(respBuf);
 
                         console.log(respData);
@@ -541,7 +545,7 @@ function processIncomingDataAndEmitEvent(data) {
     try {
         while (dataCurrentPos < data.length) {
             const respLen = data.readUInt16BE(dataCurrentPos);
-            respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
+            const respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
             const respData = parseDnsMessageBytes(respBuf);
 
             const requestKey_resp = getRequestIdentifier(respData);
@@ -582,7 +586,10 @@ async function getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
             // Set timeout to clear event listener after
             const timeoutId = setTimeout(
                 () => {
-                    reject(new Error(`Remote DNS over TLS timeout ${REMOTE_DNS_RESPONSE_TIMEOUT} ms`))
+                    reject(new Error(
+                        `Remote DNS over TLS timeout ${REMOTE_DNS_RESPONSE_TIMEOUT} ms; ` +
+                        `DNS question: ${JSON.stringify(dnsMessageFields.questions[0])}`
+                    ))
                 },
                 REMOTE_DNS_RESPONSE_TIMEOUT
             );

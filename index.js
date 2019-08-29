@@ -114,7 +114,7 @@ const EventEmitter = require('events');
                         RD: true,
                         RA: false,
                         Z: 0,
-                        // RCODE: 0,
+                        RCODE: 0,
                         QDCOUNT: 1,
                         ANCOUNT: 0,
                         NSCOUNT: 0,
@@ -128,17 +128,21 @@ const EventEmitter = require('events');
                         ]
                     }
 
-                    let outerResponseBuf;
-                    if (config.remoteDnsConnectionMode == "udp") {
-                        const outerRequestBin = functions.composeDnsMessageBin(outerRequestFields);
-                        outerResponseBuf = await functions.getRemoteDnsResponseBin(outerRequestBin, upstreamDnsIP, upstreamDnsPort);
-                    }
-                    else if (config.remoteDnsConnectionMode == "tls") {
-                        outerResponseBuf = await functions.getRemoteDnsTlsResponseBin(outerRequestFields, remoteTlsClient);
+                    let remoteResponseBuf;
+                    try {
+                        if (config.remoteDnsConnectionMode == "udp") {
+                            const outerRequestBin = functions.composeDnsMessageBin(outerRequestFields);
+                            remoteResponseBuf = await functions.getRemoteDnsResponseBin(outerRequestBin, upstreamDnsIP, upstreamDnsPort);
+                        }
+                        else if (config.remoteDnsConnectionMode == "tls") {
+                            remoteResponseBuf = await functions.getRemoteDnsTlsResponseBin(outerRequestFields, remoteTlsClient);
+                        }
+                    } catch (error) {
+                        console.error(error.message);
                     }
 
-                    const outerResponseFields = functions.parseDnsMessageBytes(outerResponseBuf);
-                    outerResponseFields.answers.forEach( answer => {
+                    const remoteResponseFields = functions.parseDnsMessageBytes(remoteResponseBuf);
+                    remoteResponseFields.answers.forEach( answer => {
                         answers.push(answer);
                     });
                 }
@@ -187,18 +191,22 @@ const EventEmitter = require('events');
         }
         else {
 
-            if (config.remoteDnsConnectionMode == "udp") {
-                //  transmit binary request and response transparently
-                const responseBuf = await functions.getRemoteDnsResponseBin(localReq, upstreamDnsIP, upstreamDnsPort);
-                server.send(responseBuf, linfo.port, linfo.address, (err, bytes) => {
-                    // add some logic, maybe?
-                });
-            }
-            else if (config.remoteDnsConnectionMode == "tls") {
-                const responseBuf = await functions.getRemoteDnsTlsResponseBin(dnsRequest, remoteTlsClient);
-                server.send(responseBuf, linfo.port, linfo.address, (err, bytes) => {
-                    // add some logic, maybe?
-                });
+            try {
+                if (config.remoteDnsConnectionMode == "udp") {
+                    //  transmit binary request and response transparently
+                    const responseBuf = await functions.getRemoteDnsResponseBin(localReq, upstreamDnsIP, upstreamDnsPort);
+                    server.send(responseBuf, linfo.port, linfo.address, (err, bytes) => {
+                        // add some logic, maybe?
+                    });
+                }
+                else if (config.remoteDnsConnectionMode == "tls") {
+                    const responseBuf = await functions.getRemoteDnsTlsResponseBin(dnsRequest, remoteTlsClient);
+                    server.send(responseBuf, linfo.port, linfo.address, (err, bytes) => {
+                        // add some logic, maybe?
+                    });
+                }
+            } catch (error) {
+                console.error(error.message);
             }
         }
     });
