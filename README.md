@@ -1,6 +1,6 @@
 # DNS Proxy
 
-DNS proxy running on NodeJS. Acts as DNS server running locally, that returns specified fake responses for given particular host names, and real responses from upstream DNS server for others. Currently, the application supports forging responses of type "A" (IP address) and "CNAME" (canonical name).
+DNS proxy running on NodeJS. Acts as DNS server running locally, that returns specified fake responses for given particular host names, and real responses from upstream DNS server for others. Currently, the application supports forging responses of type "A" (IPv4 address) and "CNAME" (canonical name).
 
 
 ## Usage:
@@ -29,17 +29,18 @@ As configuration is stored in JSON file, coments are not supported. As a workaro
 ```
 
 
-## Forging DNS response for particular requested hosts
+## Forging DNS response for particular requested host names
+
 Hostnames and related responses are specified in `requestsToForge` section of the config. This section is in form of JSON array, where each target hostname is specified in separate array item, along with given response. The hostname to forge response for should be specified in `hostName` field of that item. Other fields of the item define parameters of the response that will be returned when that particulad hostname is requested.
 
-Responses of type "A" (IP address) and "CNAME" (canonical name) are supported.
+Responses of type "A" (IPv4 address) and "CNAME" (canonical name) are supported.
 
 Changes in this section are applied on the fly, without restarting the application.
 
 ### Matching incoming requests' hostnames with these in `requestsToForge` section
 Currently, each request, whose hostname contans item's `hostName` value, will match that item. I.e., for item with `"hostName": "example.com"`, any of incoming requests with hostnames `example.com`, `www.example.com`, `example.com.net` will match. This will be improved in future releases, enabling usage of asterisk `*` substitutions and / or regular expressions.
 
-### Forge IP address in response
+### Forge IPv4 address in response
 If you need to return specific IP address for given hostname, create a record in `requestsToForge` section, contaning the hostname in `hostName` field, and IP address in `ip` field respectively, like that:
 ```json
      "requestsToForge": [
@@ -67,14 +68,14 @@ In other words, if you need to return specific canonical name for given hostname
 ```json
      "requestsToForge": [
         {
-            "comment": "Serve requests to 'prod.example.com' like it is an alias for canonical name 'dev.example.com'",
+            "comment": "Serve requests to 'example.com' like it is an alias for canonical name 'dev.example.com'",
             "hostName": "example.com",
             "cname": "dev.example.com"
         }
     ]
 ```
 
-If incoming request itself is of type CNAME, then forged response for it will contain fake canonical name only. If request is of type A (IP address), then response, in addition to canonical name, will contain IP address(es) for it, resolving them with up-level DNS server. See explanation in [RFC-1034, Section 5.2.2](https://tools.ietf.org/html/rfc1034#section-5.2.2).
+If incoming request itself is of type CNAME, then forged response for it will contain fake canonical name only. If request is of type A (IPv4 address), then response, in addition to canonical name, will contain IP address(es) for it, resolving them with up-level DNS server. See explanation in [RFC-1034, Section 5.2.2](https://tools.ietf.org/html/rfc1034#section-5.2.2).
 
 
 **Please mention:** Three example entrances mentioned above present in default config as example, feel free to remove them before using the application.
