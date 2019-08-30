@@ -10,9 +10,10 @@
 // const UPSTREAM_DNS_PORT = settings.upstreamDnsPort;
 
 const dgram = require('dgram');
-
+const myEmitter = require('./event-emitter');
 
 exports.readDomainName = readDomainName;
+exports.writeDomainNameToBuf = writeDomainNameToBuf;
 exports.parseDnsMessageBytes = parseDnsMessageBytes;
 exports.composeDnsMessageBin = composeDnsMessageBin;
 exports.getRemoteDnsResponseBin = getRemoteDnsResponseBin;
@@ -21,6 +22,10 @@ exports.ip4StringToBuffer = ip4StringToBuffer;
 exports.domainNameMatchesTemplate = domainNameMatchesTemplate;
 exports.getRequestIdentifier = getRequestIdentifier;
 exports.binDataToString = binDataToString;
+exports.getRemoteDnsTlsResponseBin = getRemoteDnsTlsResponseBin;
+exports.processIncomingDataAndEmitEvent = processIncomingDataAndEmitEvent;
+
+const REMOTE_DNS_RESPONSE_TIMEOUT = 3000;
 
 const blankMessageFields = {
     ID: 0,
@@ -113,6 +118,28 @@ function readDomainName (buf, startOffset, objReturnValue = {}) {
     }
 
     return domain.substring(1);     // rid of first "."
+}
+
+/**
+ * Returns buffer containing given domain name in DNS representation,
+ * i.e. 'label_length label_itself', with trailing 0
+ * @param {string} domainName
+ */
+function writeDomainNameToBuf (domainName) {
+    const labels = domainName.split('.');
+
+    const buf = Buffer.alloc(domainName.length + 2);
+
+    let bufPos = 0;
+    for (let i = 0; i < labels.length; i++) {
+        buf.writeUInt8(labels[i].length, bufPos);
+        bufPos++;
+        buf.write(labels[i], bufPos, 'ascii');
+        bufPos = bufPos + labels[i].length;
+    }
+    buf.writeUInt8(0, bufPos);
+
+    return buf;
 }
 
 
@@ -237,13 +264,20 @@ function parseDnsMessageBytes (buf) {
                 // if rdata contains IPv4 address,
                 // read IP bytes to string IP representation
                 let ipStr = '';
-                for (ipv4ByteIndex = 0; ipv4ByteIndex < 4; ipv4ByteIndex++) {
+                for (let ipv4ByteIndex = 0; ipv4ByteIndex < 4; ipv4ByteIndex++) {
                     ipStr += '.' + buf.readUInt8(currentByteIndex).toString();
                     currentByteIndex++;
                 }
                 record['IPv4'] = ipStr.substring(1);  // rid of first '.'
 
-            } else {    // just treat drata as raw bin data, do not parse
+            }
+            else if (record['type'] === 5 && record['class'] === 1) {
+                // CNAME
+                record['CNAME'] = readDomainName(buf, currentByteIndex);
+                currentByteIndex += record['rdlength'];
+            }
+            else {
+                // just treat drata as raw bin data, do not parse
                 currentByteIndex += record['rdlength'];
             }
 
@@ -255,7 +289,7 @@ function parseDnsMessageBytes (buf) {
 }
 
 function composeDnsMessageBin(messageFields) {
-    const buf = new Buffer.alloc(512);      // UDP message max size is 512 bytes (с) RFC 1035 2.3.4. Size limits
+    const buf = Buffer.alloc(512);      // UDP message max size is 512 bytes (с) RFC 1035 2.3.4. Size limits
     let currentByteIndex = 0;        // index of byte in buffer, which is currently written
 
     buf.writeUInt16BE(messageFields.ID, currentByteIndex);
@@ -395,7 +429,21 @@ async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP, remotePort) {
     });
 
     const promise = new Promise((resolve, reject) => {
+        // Set timeout to clear client and related event listener after
+        const timeoutId = setTimeout(
+            () => {
+                client.close();
+                const dnsMessageFields = parseDnsMessageBytes(dnsMessageBin);
+                reject(new Error(
+                    `Remote DNS over UDP timeout ${REMOTE_DNS_RESPONSE_TIMEOUT} ms; ` +
+                    `DNS question: ${JSON.stringify(dnsMessageFields.questions[0])}`
+                ))
+            },
+            REMOTE_DNS_RESPONSE_TIMEOUT
+        );
+
         client.on("message", function (msg, rinfo) {
+            clearTimeout(timeoutId);
             client.close();
             resolve(msg);
         });
@@ -405,6 +453,86 @@ async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP, remotePort) {
 
     return promise;
 }
+
+
+/**
+ * Should be used in conjunction with getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient),
+ * where remoteTlsClient has processIncomingDataAndEmitEvent(data) set as onData callback.
+ */
+// const onData = (data) => {
+function processIncomingDataAndEmitEvent(data) {
+    // console.log("data gotten over TLS connection in async function v2:", data);
+
+    // Process the case if server responds with several DNS response messages in one TCP or TLS response,
+    // so that each DNS response message will arrive in a view: 2 bytes message length, then message bytes themselves.
+    // Though, not clear for me yet, if server may respond with several DNS response messages in single TCP or TLS message
+    // in practise.
+    // ToDo how to test it? Didn't meet such case yet.
+    let dataCurrentPos = 0;
+    try {
+        while (dataCurrentPos < data.length) {
+            const respLen = data.readUInt16BE(dataCurrentPos);
+            const respBuf = data.slice(dataCurrentPos + 2, dataCurrentPos + 2 + respLen);
+            const respData = parseDnsMessageBytes(respBuf);
+
+            const requestKey_resp = getRequestIdentifier(respData);
+            myEmitter.emit('remote_tls_data_gotten', requestKey_resp, respBuf, respData);
+
+            dataCurrentPos += 2 + respLen;
+        }
+
+        return;
+    }
+    catch (err) {
+        console.log();
+        console.group();
+        console.error(err);
+        console.log('DNS response binary data:')
+        console.log(binDataToString(data));
+        console.groupEnd();
+        console.log();
+
+        // while in development, throw error after logging, for not to miss it
+        // throw err;
+    }
+}
+
+
+async function getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
+    const requestKey = getRequestIdentifier(dnsMessageFields);
+
+    const lenBuf = Buffer.alloc(2);
+    const dnsMessageBuf = composeDnsMessageBin(dnsMessageFields);
+    lenBuf.writeUInt16BE(dnsMessageBuf.length);
+    const prepReqBuf = Buffer.concat([lenBuf, dnsMessageBuf], 2 + dnsMessageBuf.length);
+
+    remoteTlsClient.write(prepReqBuf);   // as of RFC-7766 p.8, length bytes and request data should be send in single "write" call
+
+    const promise = new Promise((resolve, reject) => {
+        myEmitter.on('remote_tls_data_gotten', (requestKey_resp, respBuf, respData) => {
+            // Set timeout to clear event listener after
+            const timeoutId = setTimeout(
+                () => {
+                    reject(new Error(
+                        `Remote DNS over TLS timeout ${REMOTE_DNS_RESPONSE_TIMEOUT} ms; ` +
+                        `DNS question: ${JSON.stringify(dnsMessageFields.questions[0])}`
+                    ))
+                },
+                REMOTE_DNS_RESPONSE_TIMEOUT
+            );
+
+            if (requestKey_resp === requestKey) {
+                clearTimeout(timeoutId)
+                resolve(respBuf);
+            }
+        })
+    }).then((respBuf) => {
+        return respBuf
+    });
+
+    return promise;
+}
+
 
 // ToDo should params order be: binBuf, IP, Port, or should it be binBuf, Port, IP like it is in client.send(.....)?
 // async function getRemoteDnsResponseFields(requestMessageFields, remoteIP = UPSTREAM_DNS_IP, remotePort = UPSTREAM_DNS_PORT) {
