@@ -105,7 +105,7 @@ const EventEmitter = require('events');
                 // Otherwise (QTYPE is 1), resolve IP address for canonical hostname from uplevel DNS server
                 // and add this data to canonical hostname.
                 if (question.qtype === 1) {
-                    const outerRequestFields = {
+                    const remoteRequestFields = {
                         ID: Math.floor((Math.random() * 65535) + 1),
                         QR: false,
                         Opcode: 0,
@@ -131,11 +131,11 @@ const EventEmitter = require('events');
                     let remoteResponseBuf;
                     try {
                         if (config.remoteDnsConnectionMode == "udp") {
-                            const outerRequestBin = functions.composeDnsMessageBin(outerRequestFields);
-                            remoteResponseBuf = await functions.getRemoteDnsResponseBin(outerRequestBin, upstreamDnsIP, upstreamDnsPort);
+                            const remoteRequestBin = functions.composeDnsMessageBin(remoteRequestFields);
+                            remoteResponseBuf = await functions.getRemoteDnsResponseBin(remoteRequestBin, upstreamDnsIP, upstreamDnsPort);
                         }
                         else if (config.remoteDnsConnectionMode == "tls") {
-                            remoteResponseBuf = await functions.getRemoteDnsTlsResponseBin(outerRequestFields, remoteTlsClient);
+                            remoteResponseBuf = await functions.getRemoteDnsTlsResponseBin(remoteRequestFields, remoteTlsClient);
                         }
                     } catch (error) {
                         console.error(error.message);
