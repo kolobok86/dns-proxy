@@ -26,9 +26,9 @@ const EventEmitter = require('events');
     const settings = await getConfig();
     const config = settings.config;
 
-    const upstreamDnsIP = config.upstreamDnsIP;
+    const upstreamDnsUdpHost = config.upstreamDnsUdpHost;
     const localDnsPort = config.localDnsPort;
-    const upstreamDnsPort = config.upstreamDnsPort;
+    const upstreamDnsUdpPort = config.upstreamDnsUdpPort;
     const forgedRequestsTTL = config.forgedRequestsTTL;
 
     let remoteTlsClient;
@@ -135,7 +135,7 @@ const EventEmitter = require('events');
                     try {
                         if (config.remoteDnsConnectionMode == "udp") {
                             const remoteRequestBin = functions.composeDnsMessageBin(remoteRequestFields);
-                            remoteResponseBuf = await functions.getRemoteDnsResponseBin(remoteRequestBin, upstreamDnsIP, upstreamDnsPort);
+                            remoteResponseBuf = await functions.getRemoteDnsResponseBin(remoteRequestBin, upstreamDnsUdpHost, upstreamDnsUdpPort);
                         }
                         else if (config.remoteDnsConnectionMode == "tls") {
                             remoteResponseBuf = await functions.getRemoteDnsTlsResponseBin(remoteRequestFields, remoteTlsClient);
@@ -197,7 +197,7 @@ const EventEmitter = require('events');
             try {
                 if (config.remoteDnsConnectionMode == "udp") {
                     //  transmit binary request and response transparently
-                    const responseBuf = await functions.getRemoteDnsResponseBin(localReq, upstreamDnsIP, upstreamDnsPort);
+                    const responseBuf = await functions.getRemoteDnsResponseBin(localReq, upstreamDnsUdpHost, upstreamDnsUdpPort);
                     server.send(responseBuf, linfo.port, linfo.address, (err, bytes) => {
                         // add some logic, maybe?
                     });

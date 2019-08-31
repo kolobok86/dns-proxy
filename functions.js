@@ -1,13 +1,4 @@
-// nodejs modules https://nodejs.org/api/modules.html
-
-/** ToDo add normal jsdoc descriptions
-
-
-*/
-
-// const settings = require('./settings.js');
-// const UPSTREAM_DNS_IP = settings.upstreamDnsIP;
-// const UPSTREAM_DNS_PORT = settings.upstreamDnsPort;
+// ToDo add normal jsdoc descriptions
 
 const dgram = require('dgram');
 const myEmitter = require('./event-emitter');
@@ -422,7 +413,6 @@ function composeDnsMessageBin(messageFields) {
 }
 
 // ToDo should params order be: binBuf, IP, Port, or should it be binBuf, Port, IP like it is in client.send(.....)?
-// async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP = UPSTREAM_DNS_IP, remotePort = UPSTREAM_DNS_PORT) {
 async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP, remotePort) {
     var client = dgram.createSocket("udp4");
 
@@ -536,7 +526,6 @@ async function getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
 
 
 // ToDo should params order be: binBuf, IP, Port, or should it be binBuf, Port, IP like it is in client.send(.....)?
-// async function getRemoteDnsResponseFields(requestMessageFields, remoteIP = UPSTREAM_DNS_IP, remotePort = UPSTREAM_DNS_PORT) {
 async function getRemoteDnsResponseFields(requestMessageFields, remoteIP, remotePort) {
     const requestMessageBin = composeDnsMessageBin(requestMessageFields);
     const responseMessageBin = await getRemoteDnsResponseBin(requestMessageBin, remoteIP, remotePort);

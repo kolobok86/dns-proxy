@@ -1,28 +1,32 @@
 {
     "remoteDnsConnectionMode": "udp",
-    "upstreamDnsIP": "8.8.8.8",
-    "upstreamDnsPort": 53,
+    "upstreamDnsUdpHost": "8.8.8.8",
+    "upstreamDnsUdpPort": 53,
     "localDnsPort": 53,
     "forgedRequestsTTL": 10,
     "upstreamDnsTlsHost": "8.8.8.8",
     "upstreamDnsTlsPort": 853,
 
-
     "requestsToForge": [
         {
-            "comment": "Serve requests to example.com locally",
+            "comment": "Serve requests to 'example.com' locally, returning ip address 127.0.0.1",
             "hostName": "example.com",
             "ip": "127.0.0.1"
         },
         {
-            "comment": "Serve requests to example123.com locally",
-            "hostName": "example123.com",
-            "ip": "127.0.0.1"
-        },
-        {
-            "comment": "Serve requests to 'prod.example.com' like it is an alias for canonical name 'dev.example.com'",
+            "comment": "Serve requests to 'prod.example.com' like it is an alias for canonical name 'dev.example.com', i.e. CNAME behavior",
             "hostName": "prod.example.com",
             "cname": "dev.example.com"
+        },
+        {
+            "comment": "Forward requests for subdomains of 'example.com' to local network IP 192.168.0.15",
+            "hostName": "*.example.com",
+            "ip": "192.168.0.15"
+        },
+        {
+            "comment": "Serve requests to 'another-example.com' locally",
+            "hostName": "another-example.com",
+            "ip": "127.0.0.1"
         }
     ]
 }
