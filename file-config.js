@@ -1,5 +1,7 @@
 const path = require('path');
 const fs = require('fs');
+const functions = require('./functions');
+
 
 const CONFIG_FILE_PATH = path.resolve('./config.json');
 
@@ -35,6 +37,14 @@ function Module () {
         console.log('fileContents logged ^^');
 
         const parsedConfigData = parseConfig(fileContents);
+
+        if (parsedConfigData.requestsToForge) {
+            // prepare RegExps for matching host names, and store them in the config
+            parsedConfigData.requestsToForge.forEach(request => {
+                request.hostNamePattern = functions.makeRegexOfPattern(request.hostName);
+            });
+        }
+
         Object.assign(config, parsedConfigData);
     };
 

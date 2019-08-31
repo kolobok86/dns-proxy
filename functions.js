@@ -567,7 +567,7 @@ function domainNameMatchesTemplate(subject, pattern) {
     // return (subject.includes(template));
     const subjectLowerCase = subject.toLowerCase();
     let isMatch = false;
-    if (typeof pattern === 'string') {
+    if (typeof pattern === 'string') {  // leave this ability for legacy use
         isMatch = (subjectLowerCase === pattern.toLowerCase());
     } else {  // pattern is RegExp
         isMatch = pattern.test(subjectLowerCase);

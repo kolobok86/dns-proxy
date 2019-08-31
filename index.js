@@ -59,15 +59,18 @@ const EventEmitter = require('events');
 
         let forgingHostParams = undefined;
 
-        for (let i = 0; i < config.requestsToForge.length; i++) {
-            const requestToForge = config.requestsToForge[i];
-            const targetDomainName = requestToForge.hostName;
+        if (!!config.requestsToForge) {  // if requestsToForge section is defined in config
+            for (let i = 0; i < config.requestsToForge.length; i++) {
+                const requestToForge = config.requestsToForge[i];
+                // const targetDomainName = requestToForge.hostName;
+                const targetDomainNamePattern = requestToForge.hostNamePattern;
 
-            if (functions.domainNameMatchesTemplate(question.domainName, targetDomainName)
-                && question.qclass === 1
-                && (question.qtype === 1 || question.qtype === 5)) {
-                forgingHostParams = requestToForge;
-                break;
+                if (functions.domainNameMatchesTemplate(question.domainName, targetDomainNamePattern)
+                    && question.qclass === 1
+                    && (question.qtype === 1 || question.qtype === 5)) {
+                    forgingHostParams = requestToForge;
+                    break;
+                }
             }
         }
 

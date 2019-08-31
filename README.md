@@ -40,6 +40,8 @@ Changes in this section are applied on the fly, without restarting the applicati
 ### Matching incoming requests' hostnames with these in `requestsToForge` section
 Currently, each request, whose hostname contans item's `hostName` value, will match that item. I.e., for item with `"hostName": "example.com"`, any of incoming requests with hostnames `example.com`, `www.example.com`, `example.com.net` will match. This will be improved in future releases, enabling usage of asterisk `*` substitutions and / or regular expressions.
 
+`requestsToForge`'s items are iterated one by one, till the first match. Say, if you have `hostName`s 'example.com' and 'www.example.com' in your config, and request contains 'www.example.com', first 'example.com' will match this pattern, and processing will stop on it. So, the more specific records should be placed above the less specific ones in the config.
+
 ### Forge IPv4 address in response
 If you need to return specific IP address for given hostname, create a record in `requestsToForge` section, contaning the hostname in `hostName` field, and IP address in `ip` field respectively, like that:
 ```json

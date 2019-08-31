@@ -214,6 +214,7 @@ const TlsClient = require('../tls-client');
     testPatterns('www.test.example.com.ru', 'www.*example.com*', true);
     testPatterns('example.com', '*.example.com', false);
     testPatterns('example.com', '*example.com', true);
+    testPatterns('.example.com', '*example.com', true);
 
     console.log('Match target hostname pattern with requested one passed!');
     console.log();
