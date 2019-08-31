@@ -146,7 +146,9 @@ const TlsClient = require('../tls-client');
     const responseMessageFields = await functions.getRemoteDnsTlsResponseBin(dnsMessageFields, tlsClient);
 
     const socket = tlsClient.getSocket();
-    // console.log('socket:', socket)
+
+    // Socket closes asynchronously, so 'socket closed' console message
+    // may appear not exactly in this test, but after some period of time and other tests pass
     socket.end(null, null, () => { console.log('async DNS request: socket closed!') });
 
     console.log();
@@ -177,5 +179,42 @@ const TlsClient = require('../tls-client');
     console.log();
     console.log('CNAME response:');
     console.log(messageFields);
+    console.log();
+})();
+
+
+// match target hostname pattern with requested one
+(function() {
+    console.log();
+    console.log('Match target hostname pattern with requested one');
+
+    function testPatterns(testValue, pattern, estimatedResult) {
+        const reg = functions.makeRegexOfPattern(pattern);
+
+        const isMatch = functions.domainNameMatchesTemplate(testValue, reg);
+        console.log(
+`Match hostname '${testValue}' and pattern ${pattern}}:
+    estimated: ${estimatedResult}, returned: ${isMatch}`
+        );
+        if (isMatch !== estimatedResult) {
+            throw new Error(
+`FAIL domainNameMatchesTemplate():
+    value: '${testValue}', pattern: '${pattern}', estimated: ${estimatedResult}, returned: ${isMatch}`
+            );
+        }
+    }
+
+    testPatterns('example.com', 'example.com', true);
+    testPatterns('Example.COM', 'example.com', true);
+    testPatterns('.example.com', '*.example.com', true);
+    testPatterns('example.com', 'example*', true);
+    testPatterns('www.example.com', 'example*', false);
+    testPatterns('www.example.com', '*example*', true);
+    testPatterns('www.example.com.ru', '*example*', true);
+    testPatterns('www.test.example.com.ru', 'www.*example.com*', true);
+    testPatterns('example.com', '*.example.com', false);
+    testPatterns('example.com', '*example.com', true);
+
+    console.log('Match target hostname pattern with requested one passed!');
     console.log();
 })();

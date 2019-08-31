@@ -24,6 +24,8 @@ exports.getRequestIdentifier = getRequestIdentifier;
 exports.binDataToString = binDataToString;
 exports.getRemoteDnsTlsResponseBin = getRemoteDnsTlsResponseBin;
 exports.processIncomingDataAndEmitEvent = processIncomingDataAndEmitEvent;
+exports.makeRegexOfPattern = makeRegexOfPattern;
+
 
 const REMOTE_DNS_RESPONSE_TIMEOUT = 3000;
 
@@ -459,7 +461,6 @@ async function getRemoteDnsResponseBin(dnsMessageBin, remoteIP, remotePort) {
  * Should be used in conjunction with getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient),
  * where remoteTlsClient has processIncomingDataAndEmitEvent(data) set as onData callback.
  */
-// const onData = (data) => {
 function processIncomingDataAndEmitEvent(data) {
     // console.log("data gotten over TLS connection in async function v2:", data);
 
@@ -503,7 +504,7 @@ async function getRemoteDnsTlsResponseBin(dnsMessageFields, remoteTlsClient) {
 
     const lenBuf = Buffer.alloc(2);
     const dnsMessageBuf = composeDnsMessageBin(dnsMessageFields);
-    lenBuf.writeUInt16BE(dnsMessageBuf.length);
+    lenBuf.writeUInt16BE(dnsMessageBuf.length, 0);
     const prepReqBuf = Buffer.concat([lenBuf, dnsMessageBuf], 2 + dnsMessageBuf.length);
 
     remoteTlsClient.write(prepReqBuf);   // as of RFC-7766 p.8, length bytes and request data should be send in single "write" call
@@ -557,12 +558,34 @@ function ip4StringToBuffer(ipStr) {
 // ToDo add tests
 /**
  * Check if subject domain name matches the domain names defined by template
- * @param {string} subject - domain name to test
- * @param {string} template - template to test domain name over
+ * @param {String} subject - domain name to test
+ * @param {String | Object} pattern - template to test domain name over
+ * @returns {Boolean}
  */
-function domainNameMatchesTemplate(subject, template) {
+function domainNameMatchesTemplate(subject, pattern) {
     // sipmlest generic solution, subject to be improved by wildcards / regex etc.
-    return (subject.includes(template));
+    // return (subject.includes(template));
+    const subjectLowerCase = subject.toLowerCase();
+    let isMatch = false;
+    if (typeof pattern === 'string') {
+        isMatch = (subjectLowerCase === pattern.toLowerCase());
+    } else {  // pattern is RegExp
+        isMatch = pattern.test(subjectLowerCase);
+    }
+    return isMatch;
+}
+
+/**
+ * Make regexp of string wildcard pattern
+ * @param {String} pattern
+ */
+function makeRegexOfPattern(pattern) {
+    const stringForReg = pattern.
+        toLowerCase().
+        replace(/\./g, '\\.').
+        replace(/\*/g, '.*');
+    const templateReg = new RegExp('^' + stringForReg + '$');
+    return new RegExp(templateReg);
 }
 
 // ToDo probably need implement that
