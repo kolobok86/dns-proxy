@@ -1,6 +1,6 @@
 # DNS Proxy
 
-DNS proxy running on NodeJS. Acts as DNS server running locally, that returns specified fake responses for given particular host names, and real responses from upstream DNS server for others. Currently, the application supports forging responses of type "A" (IPv4 address) and "CNAME" (canonical name).
+DNS proxy running on NodeJS. Acts as DNS server running locally, that returns specified fake responses for given particular host names, and passes real responses from upstream DNS server for others transparently. Currently, the application supports forging responses of type "A" (IPv4 address) and "CNAME" (canonical name).
 
 
 ## Usage:
