@@ -71,7 +71,7 @@ Hostnames and related responses are specified in `requestsToForge` section of th
 ```json
      "requestsToForge": [
         {
-            "comment": "Serve requests to 'example.com' locally, returning IP 127.0.0.1",
+            "comment": "Serve requests to 'example.com' locally, returning ip address 127.0.0.1",
             "hostName": "example.com",
             "ip": "127.0.0.1"
         },
