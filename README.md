@@ -83,7 +83,7 @@ Hostnames and related responses are specified in `requestsToForge` section of th
             "cname": "dev.example.com"
         },
         {
-            "comment": "Forward requests for subdomains of 'example.com' to local network IP 192.168.0.15",
+            "comment": "Forward requests for subdomains of 'example.com' to local network ip 192.168.0.15",
             "hostName": "*.example.com",
             "ip": "192.168.0.15"
         },
