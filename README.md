@@ -29,7 +29,7 @@ Configuration is stored in _config.json_ file in root directory of the project. 
     "requestsToForge": []
 }
 ```
-_By default, the application has example _config.json_ file_
+**Please mention:** By default, the application has example _config.json_ file with default settings listed above.
 
 
 The file may be edited and saved while the proxy is running, the updated configuration will be fetched on the fly in this case, with no need to restart the application. The only exclusions are:
@@ -58,10 +58,12 @@ These parameters define how the application will connect to upstream (up-level) 
 
 ### Local Connection Parameters
 These parameters specify, how the application will accept incoming local connections from clients:
- - `localDnsPort`: local port for incoming connections. Default: `53`.
+ - `localDnsPort`: local port for incoming connections. Default: `53` (standard DNS port).
  - `forgedRequestsTTL`: TTL (time to live) for forged responses, in seconds. Default: `10`.
 
-Currently, the application accepts network connections on all available network interfaces. Whether you need to limit it, please concider using firewall.
+Incoming local requests are only accepted over UDP protocol.
+
+**Please mention:** application accepts network connections on all available network interfaces. Whether you need to limit it, please concider using firewall.
 
 
 ## Forging DNS response for particular requested host names
@@ -93,7 +95,7 @@ Hostnames and related responses are specified in `requestsToForge` section of th
     ]
 ```
 
-_Please mention: four entrances mentioned above will present in default config as example, feel free to remove them before using the application._
+**Please mention:** four entrances mentioned above will present in default config as example, feel free to remove them before using the application.
 
 Changes in this section are applied on the fly, without restarting the application.
 
