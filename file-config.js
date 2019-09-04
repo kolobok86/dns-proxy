@@ -34,7 +34,7 @@ function Module () {
 
         console.log('initConfig:');
         console.log(fileContents);
-        console.log('fileContents logged ^^');
+        console.log('fileContents logged ^^ ' + new Date().toUTCString());
 
         const parsedConfigData = parseConfig(fileContents);
 

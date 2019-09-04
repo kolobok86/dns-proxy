@@ -66,10 +66,40 @@ const EventEmitter = require('events');
                 const targetDomainNamePattern = requestToForge.hostNamePattern;
 
                 if (functions.domainNameMatchesTemplate(question.domainName, targetDomainNamePattern)
-                    && question.qclass === 1
-                    && (question.qtype === 1 || question.qtype === 5)) {
-                    forgingHostParams = requestToForge;
-                    break;
+                    && question.qclass === 1) {
+                    switch (question.qtype) {
+                        case 28:    // type IPv6 - not supported
+                                    // (c) https://tools.ietf.org/html/rfc3596#section-2.1
+                            const localDnsResponse = {
+                                ID: dnsRequest.ID,
+                                QR: true,
+                                Opcode: dnsRequest.Opcode,
+                                AA: dnsRequest.AA,
+                                TC: false,      // dnsRequest.TC,
+                                RD: dnsRequest.RD,
+                                RA: false,       // ToDo should it be some more complex logic here, rather then simply setting to 'false'?
+                                Z: dnsRequest.Z,
+                                RCODE: 4,       // 4 - not implemented
+                                QDCOUNT: dnsRequest.QDCOUNT,
+                                ANCOUNT: 0,
+                                NSCOUNT: 0,
+                                ARCOUNT: 0,     // as we're not providing additional records section
+                                questions: dnsRequest.questions
+                            }
+
+                            const responseBuf = functions.composeDnsMessageBin(localDnsResponse);
+
+                            console.log('response composed for unsupported IPv6: ', localDnsResponse.questions[0]);
+                            server.send(responseBuf, linfo.port, linfo.address, (err, bytes) => {});
+                            break;
+                        case 1:     // type Internet
+                        case 5:     // type CNAME
+                            forgingHostParams = requestToForge;
+                            break;
+                    }
+                    if (forgingHostParams) {
+                        break;
+                    }
                 }
             }
         }
