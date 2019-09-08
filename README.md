@@ -1,6 +1,8 @@
 # DNS Proxy
 
-DNS proxy running on NodeJS. Acts as DNS server running locally, that returns specified fake responses for given particular host names, and passes real responses from upstream DNS server for others transparently. Currently, the application supports forging responses of type "A" (IPv4 address) and "CNAME" (canonical name).
+DNS proxy running on NodeJS. It acts as DNS server running locally, that returns specified fake responses for given particular host names, and passes real responses from upstream DNS server for others transparently byte-to-byte (so, these passed responses can be of any type, not necesarily supported by the application). Currently, the application supports forging responses of type "A" (IPv4 address) and "CNAME" (canonical name).
+
+Forging of IPv6 responses is not supported. If request of type "AAAA" (IPv6) is received and hostname appears in list of hostnames to forge responses for, then "Not implemented" response is returned to sender. This is done for cases when local clients use both IPv4 and IPv6 protocols to resolve host IP. Otherwise, they could be able to fetch real IPv6 address, while getting fake IPv4 one.
 
 
 ## Usage:
@@ -70,6 +72,7 @@ Incoming local requests are only accepted over UDP protocol.
 
 Hostnames and related responses are specified in `requestsToForge` section of the config. This section is in form of JSON array, where each target hostname is specified in separate array item, along with given response. The hostname to forge response for should be specified in `hostName` field of that item. Other fields of the item define parameters of the response that will be returned when that particulad hostname is requested.
 
+
 ```json
      "requestsToForge": [
         {
@@ -127,6 +130,8 @@ If you need to return specific IP address for given hostname, create a record in
 Edit it according to your needs, specifying proper `hostName` and `ip`.
 
 Currently, only one IP can be set for specific hostname.
+
+As mentioned above, if request of type "AAAA" (IPv6) matches the hostname, then "Not implemented" response is returned. So, if some local client sends two requests: one to resolve IPv4 address, and another for IPv6, then the application sends fake response for IPv4, and "Not implemented" for IPv6. Otherwise, client could bypass proxy and get real IPv6 address.
 
 
 ### Forge CNAME response

@@ -59,10 +59,9 @@ const EventEmitter = require('events');
 
         let forgingHostParams = undefined;
 
-        if (!!config.requestsToForge) {  // if requestsToForge section is defined in config
+        if (!!config.requestsToForge) {  // if requestsToForge section presents in config
             for (let i = 0; i < config.requestsToForge.length; i++) {
                 const requestToForge = config.requestsToForge[i];
-                // const targetDomainName = requestToForge.hostName;
                 const targetDomainNamePattern = requestToForge.hostNamePattern;
 
                 if (functions.domainNameMatchesTemplate(question.domainName, targetDomainNamePattern)
@@ -94,6 +93,7 @@ const EventEmitter = require('events');
                             break;
                         case 1:     // type Internet
                         case 5:     // type CNAME
+                                    // compose DNS response locally
                             forgingHostParams = requestToForge;
                             break;
                     }
