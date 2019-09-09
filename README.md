@@ -157,4 +157,4 @@ node tests/test.js
 ```
 
 ## License
-Licence is yet to choose.
+This project is licensed under the terms of the MIT license (see the LICENSE file in root directory of the project).
